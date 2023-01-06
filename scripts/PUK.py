@@ -317,7 +317,7 @@ def find_smallest_energy(Energies_matrix):
             smallest_adsorbate = adsorbate
             small_idx_x = x
             small_idx_y = y
-    return small_idx_x, small_idx_y, smallest_energy, adsorbate
+    return small_idx_x, small_idx_y, smallest_energy, smallest_adsorbate
 
 def count_adsorbates(adsorbates_hollow, adsorbates_on_top):
     unique, counts = np.unique(np.concatenate((adsorbates_hollow, adsorbates_on_top)), return_counts=True)
