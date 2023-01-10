@@ -323,8 +323,50 @@ def count_adsorbates(adsorbates_hollow, adsorbates_on_top):
     unique, counts = np.unique(np.concatenate((adsorbates_hollow, adsorbates_on_top)), return_counts=True)
     return dict(zip(unique, counts))
 
+def count_adsorbates_full(adsorbates_hollow, adsorbates_on_top):
+    adsorbates_all = np.concatenate((adsorbates_hollow, adsorbates_on_top))
+    adsorbate_dict = {"H": 0, "OH": 0, "O": 0, "empty": 0}
+    for adsorbate in ["H", "OH", "O", "empty"]:
+        adsorbate_dict[adsorbate] = np.count_nonzero(adsorbates_all == adsorbate)
+    return adsorbate_dict
 
+def make_voltage_range(V_start, V_max, V_min, num_rounds, points_per_round):
+    # Make a single round first
+    #Figure out the ratios
+    total_length = 2*(V_max-V_min)
+    
+    a = list(np.linspace(V_start, V_max, int(points_per_round * (V_max-V_start) / total_length)))
+    b = list(np.linspace(V_max, V_min, int(points_per_round * (V_max-V_min) / total_length)))
+    c = list(np.linspace(V_min, V_start, int(points_per_round * (V_start-V_min) / total_length)))
+    d = a+b+c
+    d *= num_rounds
+    return d
 
+def steric_hindrance(steric_bonus_energy, idx_x, idx_y, dim_x, dim_y, adsorbate, adsorbates_hollow, adsorbates_on_top):
+    
+    # Hvilken type site sidder adsorbatet på?
+    if adsorbate == "OH":
+        site_type = "on-top"
+    else:
+        site_type = "hollow"
+    
+    if site_type == "on-top":
+        # Tæl naboer på samme type site (der er 6 af dem) TJEK LAV MODULO
+        on_top_neighbours = [adsorbates_on_top[(idx_x+site_x)%dim_x, (idx_y+site_y)%dim_y] for site_x, site_y in zip([-1, 1, 0, 0, -1, 1], [0, 0, -1, 1, 1, -1])] #Lav en zip-ting der list comprehender sites of interest så vi får en liste med de steders indhold. Ligesom med vektorerne. Kig der.
+        # Tæl naboer på den anden type site (der er 3 af dem)
+        hollow_neighbours = [adsorbates_hollow[(idx_x+site_x)%dim_x, (idx_y+site_y)%dim_y] for site_x, site_y in zip([0, -1, 0], [0, 0, -1])]
+        
+    else: # Hollow site
+        # Tæl naboer på samme type site (der er 6 af dem)
+        hollow_neighbours = [adsorbates_hollow[(idx_x+site_x)%dim_x, (idx_y+site_y)%dim_y] for site_x, site_y in zip([-1, 1, 0, 0, -1, 1], [0, 0, -1, 1, 1, -1])] #Lav en zip-ting der list comprehender sites of interest så vi får en liste med de steders indhold. Ligesom med vektorerne. Kig der.
+        # Tæl naboer på den anden type site (der er 3 af dem)
+        on_top_neighbours = [adsorbates_on_top[(idx_x+site_x)%dim_x, (idx_y+site_y)%dim_y] for site_x, site_y in zip([0, 1, 0], [0, 0, 1])]
+    
+    # Combine and count
+    all_neighbours = on_top_neighbours + hollow_neighbours
+    neighbours = 9 - all_neighbours.count("empty")
+    steric_energy = neighbours * steric_bonus_energy
+    return steric_energy
 
 
 
