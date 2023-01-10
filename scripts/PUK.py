@@ -23,18 +23,18 @@ def simulate_surface(dim_x, dim_y): #Is still random - could be used with a seed
     surface = np.reshape(surface_list, (dim_x, dim_y, dim_z)) #Reshape list to the
     return surface
 
-def on_top_site_vector(surface, site_x, site_y):
-    
+def on_top_site_vector(surface, site_x, site_y): # I should have done modulo to dim_x and dim_y
+    dim_x, dim_y = np.shape(surface)[0], np.shape(surface)[1]
     site1 = [surface[site_x, site_y, 0]]# Make a one-hot encoded vector of the very site here! Add at the beginning
     site1_count = [site1.count(metals[n]) for n in range(len(metals))]
     
-    top6 = [surface[site_x % 100, (site_y-1) % 100, 0], surface[site_x % 100, (site_y+1) % 100, 0], surface[(site_x-1) % 100, site_y % 100, 0], surface[(site_x+1) % 100, site_y % 100, 0], surface[(site_x-1) % 100, (site_y+1) % 100, 0], surface[(site_x+1) % 100, (site_y-1) % 100, 0]]
+    top6 = [surface[site_x % dim_x, (site_y-1) % dim_y, 0], surface[site_x % dim_x, (site_y+1) % dim_y, 0], surface[(site_x-1) % dim_x, site_y % dim_y, 0], surface[(site_x+1) % dim_x, site_y % dim_y, 0], surface[(site_x-1) % dim_x, (site_y+1) % dim_y, 0], surface[(site_x+1) % dim_x, (site_y-1) % dim_y, 0]]
     top6_count = [top6.count(metals[n]) for n in range(len(metals))]
     
-    mid3 = [surface[(site_x-1) % 100, (site_y-1) % 100,1], surface[site_x % 100, (site_y-1) % 100,1], surface[(site_x-1) % 100, site_y % 100,1]]
+    mid3 = [surface[(site_x-1) % dim_x, (site_y-1) % dim_y,1], surface[site_x % dim_x, (site_y-1) % dim_y,1], surface[(site_x-1) % dim_x, site_y % dim_y,1]]
     mid3_count = [mid3.count(metals[n]) for n in range(len(metals))]
     
-    bot3 = [surface[(site_x-1) % 100, (site_y-1) % 100, 2], surface[(site_x-1) % 100, (site_y+1) % 100, 2], surface[(site_x+1) % 100, (site_y-1) % 100, 2]]
+    bot3 = [surface[(site_x-1) % dim_x, (site_y-1) % dim_y, 2], surface[(site_x-1) % dim_x, (site_y+1) % dim_y, 2], surface[(site_x+1) % dim_x, (site_y-1) % dim_y, 2]]
     bot3_count = [bot3.count(metals[n]) for n in range(len(metals))]
     
     return site1_count + top6_count + mid3_count + bot3_count
@@ -500,7 +500,6 @@ def simulate_CV(surface, voltage_range, hysteresis_threshold, steric_bonus_energ
                     adsorbates_on_top[idx_x, idx_y] = adsorbate
                     # Remove the energies at this position
                     Energies_matrix["OH"][idx_x, idx_y] = 100
-        
         
         ### SUM ADSORBATE ENERGIES ### 
         
