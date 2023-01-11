@@ -343,6 +343,16 @@ def make_voltage_range(V_start, V_max, V_min, num_rounds, points_per_round):
     d *= num_rounds
     return d
 
+def make_voltage_range2(V_min, V_max, num_rounds, points_per_round):
+    # Make a single round first
+    #Figure out the ratios
+    
+    a = list(np.linspace(V_min, V_max, int(points_per_round * 0.5)))
+    b = list(np.linspace(V_max, V_min, int(points_per_round * 0.5)))
+    c = a+b
+    c *= num_rounds
+    return c
+
 def steric_hindrance(steric_bonus_energy, idx_x, idx_y, dim_x, dim_y, adsorbate, adsorbates_hollow, adsorbates_on_top):
     
     # Hvilken type site sidder adsorbatet på?
