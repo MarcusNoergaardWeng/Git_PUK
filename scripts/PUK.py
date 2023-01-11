@@ -376,7 +376,7 @@ def steric_hindrance(steric_bonus_energy, idx_x, idx_y, dim_x, dim_y, adsorbate,
     # Combine and count
     all_neighbours = on_top_neighbours + hollow_neighbours
     neighbours = 9 - all_neighbours.count("empty")
-    steric_energy = neighbours * steric_bonus_energy
+    steric_energy = neighbours * steric_bonus_energy * np.random.normal(1, 0.1) #Now with just a bit of randomness
     return steric_energy
 
 def plot_CV(metals, surface, voltage_range, sum_delta_G_log, adsorbates_log, steric_bonus_energy, hysteresis_threshold, **filename):
