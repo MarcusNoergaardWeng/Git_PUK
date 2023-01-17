@@ -379,52 +379,6 @@ def steric_hindrance(steric_bonus_energy, idx_x, idx_y, dim_x, dim_y, adsorbate,
     steric_energy = neighbours * steric_bonus_energy #* np.random.normal(1, 0.1) #Now with just a bit of randomness
     return steric_energy
 
-def plot_CV(metals, surface, voltage_range, sum_delta_G_log, adsorbates_log, steric_bonus_energy, hysteresis_threshold, **filename):
-    fig, (ax_a, ax_b, ax_c) = plt.subplots(1, 3, figsize = (18, 5))
-    
-    ### TITLE ###
-    fig.suptitle(f"Simulated cyclic voltammogram \n steric hindrance parameter: {steric_bonus_energy} (eV), hysteresis barrier {hysteresis_threshold} (eV) \n", x = 0.5, y = 1.05,fontsize = 18)
-    
-    ### SURFACE COMPOSITION ###
-    composition, composition_string = surface_composition(metals, surface)
-    ymax = max(composition.values()) * 1.1
-    ax_a.set_ylim(0, ymax)
-    ax_a.set_title("Surface composition: " + composition_string)
-    ax_a.set_yticks([])
-    #ax.set_xticks([])
-    bar1 = ax_a.bar(composition.keys(), composition.values(), alpha = 0.9, color = ["silver", "gold", "darkorange", "lightsteelblue", "cornflowerblue"])
-    
-    for idx, rect in enumerate(bar1):
-        height = rect.get_height()
-        fraction = list(composition.values())[idx]*100
-        ax_a.text(rect.get_x() + rect.get_width() / 2.0, height, s = f"{fraction:.2f}" + " %", ha='center', va='bottom')
-        
-    ### ADSORBATES ON SURFACE ###
-    adsorbate_colours = {"H": "tab:green", "OH": "tab:blue", "O": "tab:red", "empty": "Grey"}
-    for adsorbate in ["H", "OH", "O"]:
-        ax_b.plot(voltage_range, [adsorbates_log[n][adsorbate]/100 for n in range(len(adsorbates_log))], c = adsorbate_colours[adsorbate], label = adsorbate)
-    
-    ax_b.set_title("Adsorbates on the surface sites")
-    ax_b.set_xlabel("Voltage (V)")
-    ax_b.set_ylabel("Occupation (%)")
-    
-    ax_b.legend()
-    
-    ### CYCLIC VOLTAMMOGRAM ###
-    
-    ax_c.plot(voltage_range, -np.gradient(np.gradient(sum_delta_G_log)))
-    
-    ax_c.set_title("Cyclic voltammogram")
-    ax_c.set_xlabel("Voltage (V)")
-    ax_c.set_yticks([])
-    
-    if filename:
-        #print("The filename is: ", filename["filename"])
-        fig.savefig("../figures/Sim_CV/"+filename["filename"]+".png", dpi = 300, bbox_inches = "tight")
-    fig.show()
-    return None
-
-
 def simulate_CV(surface, voltage_range, hysteresis_threshold, steric_bonus_energy, dim_x, dim_y, adsorbates_hollow, adsorbates_on_top, hollow_site_model, on_top_site_model):
     adsorbates_log = []
     sum_delta_G_log = []
@@ -535,6 +489,67 @@ def simulate_CV(surface, voltage_range, hysteresis_threshold, steric_bonus_energ
         adsorbates_log.append(count_adsorbates_full(adsorbates_hollow, adsorbates_on_top))
     
     return sum_delta_G_log, adsorbates_log
+
+def plot_CV(metals, surface, voltage_range, sum_delta_G_log, adsorbates_log, steric_bonus_energy, hysteresis_threshold, **filename):
+    fig, (ax_a, ax_b, ax_c) = plt.subplots(1, 3, figsize = (18, 5))
+    
+    ### TITLE ###
+    fig.suptitle(f"Simulated cyclic voltammogram \n steric hindrance parameter: {steric_bonus_energy} (eV), hysteresis barrier {hysteresis_threshold} (eV) \n", x = 0.5, y = 1.05,fontsize = 18)
+    
+    ### SURFACE COMPOSITION ###
+    composition, composition_string = surface_composition(metals, surface)
+    ymax = max(composition.values()) * 1.1
+    ax_a.set_ylim(0, ymax)
+    ax_a.set_title("Surface composition: " + composition_string)
+    ax_a.set_yticks([])
+    #ax.set_xticks([])
+    bar1 = ax_a.bar(composition.keys(), composition.values(), alpha = 0.9, color = ["silver", "gold", "darkorange", "lightsteelblue", "cornflowerblue"])
+    
+    for idx, rect in enumerate(bar1):
+        height = rect.get_height()
+        fraction = list(composition.values())[idx]*100
+        ax_a.text(rect.get_x() + rect.get_width() / 2.0, height, s = f"{fraction:.2f}" + " %", ha='center', va='bottom')
+        
+    ### ADSORBATES ON SURFACE ###
+    adsorbate_colours = {"H": "tab:green", "OH": "tab:blue", "O": "tab:red", "empty": "Grey"}
+    for adsorbate in ["H", "OH", "O"]:
+        ax_b.plot(voltage_range, [adsorbates_log[n][adsorbate]/100 for n in range(len(adsorbates_log))], c = adsorbate_colours[adsorbate], label = adsorbate)
+    
+    ax_b.set_title("Adsorbates on the surface sites")
+    ax_b.set_xlabel("Voltage (V)")
+    ax_b.set_ylabel("Occupation (%)")
+    
+    ax_b.legend()
+    
+    ### CYCLIC VOLTAMMOGRAM ###
+    CV = list(-np.gradient(np.gradient(sum_delta_G_log)))
+    voltage_range_mod = list(copy.deepcopy(voltage_range))
+    for n in range(5): #Remove this many of the smallest and largest voltage-values
+        #min_index = np.argmin(voltage_range_mod) #No longer needed with make_voltage_range2
+        #del voltage_range_mod[min_index]
+        #del CV[min_index]
+        max_index = np.argmax(voltage_range_mod)
+        del voltage_range_mod[max_index]
+        del CV[max_index]
+    
+    CV[len(CV)//2:] = list(np.array(CV[len(CV)//2:])*-1)
+    
+    ax_c.plot(voltage_range_mod, CV)
+    
+    ax_c.set_title("Cyclic voltammogram")
+    ax_c.set_xlabel("Voltage (V)")
+    ax_c.set_ylabel("j ($mA cm^{-2}$)")
+    #ax_c.set_yticks([])
+    #ax_c.set_ylim([-0.001, 0.002])
+    #ax_c.set_xlim([np.min(voltage_range)+0.05, np.max(voltage_range)-0.06])
+    
+    fig.subplots_adjust(wspace = 0.28)
+    
+    if filename:
+        #print("The filename is: ", filename["filename"])
+        fig.savefig("../figures/Sim_CV/"+filename["filename"]+".png", dpi = 300, bbox_inches = "tight")
+    fig.show()
+    return None
 
 
 
