@@ -1,0 +1,264 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2706
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \\documentclass\{article\}\
+\\usepackage[utf8]\{inputenc\}\
+\\usepackage\{multicol, caption\}\
+\\usepackage\{graphicx\}\
+\\usepackage\{amsmath\}\
+\\usepackage\{hyperref\}\
+\\usepackage\{mathtools\}\
+\
+\\newenvironment\{Figure\}\
+  \{\\par\\medskip\\noindent\\minipage\{\\linewidth\}\}\
+  \{\\endminipage\\par\\medskip\}\
+\
+\\title\{Simulating Cyclic Voltammograms\}\
+\\author\{Marcus N\'f8rgaard Weng\}\
+\\date\{January 2023\}\
+\
+\\begin\{document\}\
+\
+\\maketitle\
+\
+\\begin\{multicols\}\{2\}\
+\
+\\section\{Introduction\}\
+% Noget generelt om katalyse\
+Good catalysts are essential for many chemical processes in green technologies that are prospective technological solutions to the climate crisis. This includes green energy solutions like fuel cell reactions and power-to-x, that are reliant on good catalytic activity. It is therefore of great importance to find new ways to improve and discover new catalysts. Cyclic voltammograms is an experimental method to examine a catalytic reaction, which shows the current from the reaction as a function of the applied voltage. In fuel cell reactions a large current at a small voltage is preferable, but measuring this experimentally requires that the catalyst material is synthesized and tested in a laboratory. Hence, large-scale testing of thousands of catalyst materials would be infeasible. The composition space of eg. high entropy alloys (HEAs) is extremely large, and thus can not be explored in a timely manner purely by experimental measurements. If cyclic voltammograms could be simulated quickly and accurately on a computer given a surface composition and a reaction, thousands of compositions' cyclic voltammograms could be simulated and compared each day. This project is an attempt at simulating cyclic voltammograms of water on an arbitrary (Ag, Au, Cu, Pd, Pt) metal catalyst with variable hysteresis and steric hindrance.\
+\
+\\subsection\{Reactions\}\
+In an aqueous solution with a reversible hydrogen electrode (RHE) three adsorbates on the catalyst is expected; hydrogen, hydroxide and oxygen.\
+The adsorption reaction and corresponding binding energy of hydrogen is:\
+\\begin\{equation\}\
+    H^+ + e^- \\rightarrow \\prescript\{*\}\{\}\{H\}\
+\\end\{equation\}\
+\\begin\{equation*\}\
+    \\Delta E_\{^*H\} = E_\{^*H\} - E_* - \\tfrac\{1\}\{2\}E_\{H_2\} + eU\
+\\end\{equation*\}\
+\
+The adsorption reaction and corresponding binding energy of hydroxide is:\
+\\begin\{equation\}\
+    H_2O \\rightarrow ^*\\!OH + H^+ + e^-\
+\\end\{equation\}\
+\\begin\{equation*\}\
+    \\Delta E_\{^*OH\} = E_\{^*OH\} - E_* + \\tfrac\{1\}\{2\}E_\{H_2\} - eU\
+\\end\{equation*\}\
+\
+The adsorption reaction and corresponding binding energy of oxygen is:\
+\\begin\{equation\} % TJEK Ret s\'e5 den g\'e5r direkte fra vand til *O\
+    H_2O \\rightarrow ^*\\!O + 2*H^+ + 2*e^-\
+\\end\{equation\}\
+\\begin\{equation*\}\
+    \\Delta E_\{^*O\} = E_\{^*O\} - E_\{*\} + E_\{H_2\} - 2eU\
+\\end\{equation*\}\
+\
+The star $*$ indicates the surface and a star in front of an atom or molecule indicates an adsorbate. Because the hydrogen adsorption reaction takes an electron and the other two "produce" electrons, the hydrogen adsorption reaction is encouraged under reductive conditions and the others are encouraged under oxidative conditions.\
+\
+\\subsection\{DFT training data\}\
+The DFT data consists of slabs with different compositions with an adsorbate on the surface and an associated energy. The H data set has 56 slabs with 9 hollow FCC sites used per slab at a 3x3x5 slab totaling 504 different scenarios with an associated energy. The OH data set has 395 slabs with 1 on-top site used per slab. The O data set has 500 slabs with 1 hollow FCC site used per slab. Furthermore, pristine slabs with single metals were used to find the energy of the surface without adsorbates. All DFT data was provided by Jack Kirk Pedersen.\
+\
+\\section\{Methods\}\
+\
+\\subsection\{Predicting binding energies of adsorbates\}\
+In order to simulate cyclic voltammograms, an accurate binding energy prediction model for arbitrary sites for the adsorbates of interest. A model for on-top sites and a model for hollow sites was trained on the DFT data. \
+In order to train a regression model on the DFT data with the adsorbate and surface metals as input and the binding energy as output, a feature vector that converts the relevant metals from a slab to a suitable input is needed. The feature vector used takes select atoms from the first three layers (TJEK Because Christian showed that that's what is important) into account and is based on an article (cite the article). Linear regression models were tested as an extremely simple solution, which actually did very well, when only predicting the energy of a single adsorbate. The fact that such a simple model works well shows that the problem of predicting binding energy based on metals in the surroundings of the site is very simple. A more complex XGBoost (Boosted Decision Tree) model was used because it has the ability to predict binding energies of different adsorbates that binds to the same type of site when including the adsorbate in the feature vector and combining multiple data sets. This theoretically allows for transfer learning between different adsorbates and reduces the number of models to one per site type.\
+\
+\\subsection\{Predicting energies of simulated surfaces\}\
+Surfaces were simulated by randomly drawing one of the chosen metal\
+s for each atom in the surface. The metals can be chosen freely from the metals that the energy prediction models were trained on (Ag, Au, Cu, Pd, Pt). The binding energy prediction model can then be used on all possible adsorbates on all sites to get estimates of all possible binding energies on the surface. This will be necessary for both ways of simulating cyclic voltammograms.\
+\
+\\subsection\{Surface binding energies to voltammogram\}\
+A phase diagram shows the binding energy ($eV$) as a function of the voltage ($V$), but the binding energy can't rise above 0, at which point a constant function y = 0 takes over. The slope of the binding energy can be seen in the equations 1-3 and is the coefficient to the $eU$ terms, relating to the number of electrons used or produced in the adsorption reaction. Differentiating the phase diagram yields a charge isoterm.\
+A charge isoterm shows the charge per area ($\\mu C cm^\{-2\}$) as a function of voltage. Differentiating the isoterm yields the cyclic voltammogram, which shows the charge transfer, amperage ($\\mu A cm^\{-2\}$), as a function of voltage. \
+% Forklar den f\'f8rste metode til at g\'e5 fra energier til CV\
+The first method of converting all surface binding energies to a cyclic voltammogram starts with creating a phase diagram for each individual adsorbate binding energy. For a 100x100 simulated surface, 10000 on-top sites, where $OH$ can adsorb, and 10000 hollow FCC sites, where $H$ and $O$ exist, resulting in 30000 energies and corresponding phase diagrams. The derivative of each phase diagram is taken and summed together resulting in a singular charge isoterm, the derivative of which is the cyclic voltammogram.\
+% One phase diagram for each adsorbate \
+\
+\\subsection\{Simulating surface adsorbates while varying voltage\}\
+The previous cyclic voltammogram method does not account for effects seen in experimental data, such as hysteresis and neighbour interactions. A method where these effects are approximated is made. In the method a linear sweep or circular sweep in voltage made, while concurrently keeping track of the adsorbates on the surface and the summed $\\Delta G$ of the adsorbates at each voltage. The steps in the algorithm for this method is the following for each voltage:\
+\
+\\begin\{itemize\}\
+    \\item Use the binding-energy prediction model to predict energies of all adsorbates on their appropriate sites (Both adsorbates already adsorbed and prospective adsorbates on empty sites)\
+    \\item Optional: Use approximation for steric hindrance (Neighbour-interactions) to account for steric hindrance between neighbour adsorbates\
+    \\item Remove all adsorbates with a binding energy above 0 or above the hysteresis energy barrier if chosen\
+    \\item Find the prospective adsorbate on an empty site with the smallest negative energy and adsorb the adsorbate if its binding energy is still negative after accounting for steric hindrance\
+    \\item Continue adsorbing prospective adsorbates until the smallest energy found is no longer negative\
+    \\item Save the summed $\\Delta G$ of the adsorbates divided by the number of surface atoms at this voltage for use in the phase diagram.\
+\\end\{itemize\}\
+\
+The phase diagram is constructed from the voltages on the x-axis and the summed $\\Delta G$ of the adsorbates divided by the number of surface atoms on the y-axis. The double derivative of this phase diagram is the cyclic voltammogram.\
+\
+\\subsubsection\{Modeling neighbour-interactions\}\
+There are many ways to estimate neighbour-interactions, that either increase the binding energy of an adsorbate with a close neighbour or reduce the probability to 0. Since the exact interactions and effects are not yet known, an estimate will have to do. The chosen estimate is a model that adds a small energy $s$ to the binding energy for each close neighbour to a site. A close neighbour is defined as follows: On an on-top site, the close neighbours are the three surrounding hollow sites and the six closest on-top sites. The same is true for a hollow site, just with the sites switched. The small energy $s$ can theoretically be tuned to fit the simulated cyclic voltammogram to an experimentally measured cyclic voltammogram.\
+\\begin\{equation\}\
+    \\Delta G_\{steric\} = \\Delta G + s * \\sum neighbours\
+\\end\{equation\}\
+\
+\\subsubsection\{Modeling hysteresis\}\
+A simple model for imitating hysteresis was implemented by adsorbing adsorbates when the binding energy is negative, but only removing them when the binding energy exceeds a positive energy barrier. This causes adsorbates to adsorb at one voltage, but detach at another voltage. The hysteresis energy barrier $h$ can also be tuned.\
+\
+\\section\{Results and discussion\}\
+% In this section the results are presented\
+\\subsection\{Predicting binding energies of adsorbates\}\
+The results from all energy prediction models on the hollow site adsorbates are shown in figure \\ref\{fig:Model_Comparison\}. When training each model, the data set was divided into a standard 80/10/10 split between training data, validation data and test data. When training on a single adsorbate, the linear regression models surprisingly had better MAE (eV) than the Gradient Boosting model, with $MAE(H) = 0.0439$ eV and $MAE(O) = 0.0547$ eV. An XGBoost model will always be able to achieve at least similar results to a linear regression model, and it could have with more hyperparameter tuning. If the underlying connections are linear, then a linear regression model will do as well as a Gradient Boosting model, and this might be the case. % This means each feature in the feature vector has a linear relation to the energy\
+For the models trained on both adsorbates on the hollow site, the Gradient Boosting model performed the best with an $MAE(H \\& O) = 0.0583$ eV. In this case, a feature indicating which adsorbate the datapoint corresponds to is included in the feature vector. This approach of combining data from adsorbates on the same sites can be extended to more complex systems with additional adsorbates and allows for possible transfer learning between different adsorbates.\
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{Model_comparison_table.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:Model_Comparison\}\
+\\end\{Figure\}\
+\
+In figure \\ref\{fig:XGBoost_Hollow\} the Gradient Boosting model $\\Delta G$ predictions on the test set of the hollow-site adsorbates is shown as a function of the target $\\Delta G$ from DFT. Almost all predictions lie within 0.1 eV of the target.\
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{XGBoost_Hollow.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:XGBoost_Hollow\}\
+\\end\{Figure\}\
+\
+In figure \\ref\{fig:LinReg_Hollow\} the Linear Regression model $\\Delta G$ predictions on the test set of the hollow-site adsorbates is shown as a function of the target $\\Delta G$ from DFT. It is apparent that the linear regression can not handle multiple adsorbates data sets combined because the model structure is too simple. \
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{LinReg_Hollow.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:LinReg_Hollow\}\
+\\end\{Figure\}\
+\
+In figure \\ref\{fig:XGBoost_on_top\} the Gradient Boosting model $\\Delta G$ predictions on the test set of the hollow site adsorbate $OH$ is shown as a function of the target $\\Delta G$ from DFT.\
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{XGBoost_on_top.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:XGBoost_on_top\}\
+\\end\{Figure\}\
+\
+For both the hollow-site model and the on-top model, the performance is great, indicating that the task of predicting the $\\Delta G_\{DFT\}$ from nearby surface atoms is fairly easy in terms of machine learning tasks, although the performance could likely be improved with a larger data set given that all three data sets combined are less than 1500 datapoints. Both XGBoost models are used for the rest of the data treatment.\
+\
+\\subsection\{Predicting energies of simulated surfaces\}\
+With the simulated surfaces and the energy prediction models, a surface with an chosen split between chosen metals can be simulated and the energies of all adsorbates predicted. This is shown for a 1000 by 1000 surface with an even split between the metals Ag, Au, Cu, Pd, Pt in figure \\ref\{fig:Evensplit_surface\}. In the top right plot, the energies for each adsorbate is shown, with $H$ generally having the lowest $\\Delta G$, then $OH$ with two peaks and $O$ generally at the highest $\\Delta G$s. This follows the expected pattern of the energies.\
+\
+% Show equal distribution energies\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{Evensplit_surface.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:Evensplit_surface\}\
+\\end\{Figure\}\
+\
+In figure \\ref\{fig:even_random_draw\} the atoms in a surface is drawn randomly for each atom, which might result in splits between the atoms, which are not perfect, as seen in the composition in the top left plot. In figure \\ref\{fig:Evensplit_surface\}, the split between the metals is ensured to be perfect according to the specified split. Comparing the two resulting energy distributions shows that they are almost identical, hence the distribution of metals doesn't need to be perfectly even. %forklar hvordan der er trukket tilf\'e6ldigt og ikke fordelt helt pr\'e6cist det rigtige antal af hver. Det interessante er at fordelingerne af energier er stort set identiske. \
+\
+% Show the surface with a not completely even split, where the energies are the same!!!\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{even_random_draw.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:even_random_draw\}\
+\\end\{Figure\}\
+\
+In figure \\ref\{fig:excluded_Ag\}, Ag is excluded from the surface, which results in different distributions of the $\\Delta G$s for each adsorbate. Notably, the $OH$ peak at $\\approx 1.8$ eV is not present when Ag is not present in the surface. % TJEK The rest of them are shown in SI? Or just shown at examination?\
+\
+% Show results when removing one metal\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{excluded_Ag.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:excluded_Ag\}\
+\\end\{Figure\}\
+\
+% Show results for only one metal - kinda funky\
+It is possible to create a surface with only a single metal. This results in all sites being identical, all feature vectors on each site being identical and hence all predicted $\\Delta G$s are identical for each adsorbate. This yields three delta functions, where in reality, the energies on identical sites might have a small spread. % TJEK Show in SI? Det orker vi ikke\
+\
+\\subsection\{Surface binding energies to voltammogram\}\
+In figure \\ref\{fig:Evensplit_surface\} and \\ref\{fig:excluded_Ag\} the energies have been converted to voltammograms using the first method described. The bottom left plot shows the charge isoterms obtained from the energies and the bottom right plot shows the resulting voltammograms. They closely resemble the energies, because the binding energies dictate which voltage is needed to make the binding energies negative.\
+\
+\\subsection\{Simulating surface adsorbates while varying voltage\}\
+In figure \\ref\{fig:\} to \\ref\{fig:\} cyclic voltammograms were simulated with the second method, where adsorbates are kept track of during a voltage sweep. The middle plots show the occupation of each adsorbate as a percentage of the maximum number of adsorbates if all sites were covered. This is useful to track which adsorbates adsorb and detach at which voltages, because the cyclic voltammogram only shows the current. The voltammograms made with this method is cyclic because it is possible to use a circular voltage swipe.\
+\
+% Show baseline plot with no hysteresis and steric hindrance\
+\
+The simulated cyclic voltammogram of a surface with all five metals and no hysteresis or neighbour interactions is shown in figure \\ref\{fig:CV2_Baseline\}. The cyclic voltammogram is in agreement with the voltammogram created with the first method on a similar surface with all metals present. This cyclic voltammogram is symmetric through a mirror plane along the linear function j = 0.\
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{CV2/Baseline.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:CV2_Baseline\}\
+\\end\{Figure\}\
+\
+% Hysteresis and steric hindrance can be changed\
+With this method, the hysteresis can be changed, as shown in figure \\ref\{fig:CV2_Hysteresis\}. This results in adsorbates that adsorb at a different voltage than they detach at, leaving them at the surface for a longer time. This has an effect on the voltammogram, which is no longer symmetric. The effect is not just a simple shift in the cyclic voltammogram as expected. This might be due to the fact that the phase diagram has the summed binding energies on the y-axis and with the hysteresis energy barrier these can go above 0 eV.\
+\
+% Show plot with hysteresis\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{CV2/Hysteresis01.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:CV2_Hysteresis\}\
+\\end\{Figure\}\
+\
+% Show plot with steric hindrance - Explain that it is a lil messed up\
+In figure \\ref\{fig:CV2_Steric\}, the steric hindrance parameter has been increased to $0.05$, meaning each of the 9 "close neighbours" add $0.05$ eV to the binding energy. This was supposed to make the last adsorbates require higher or lower voltages to adsorb, slowing the adsorption when the occupancy of the surface is high. However the adsorbates should adsorb and detach at the same voltages, which they do not. A bug is suspected to be causing this.\
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{CV2/Steric005.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:CV2_Steric\}\
+\\end\{Figure\}\
+\
+% Show plot with surface with one excluded metal\
+In figure \\ref\{fig:CV2_No_Ag\}, \
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{CV2/CV2_No_Ag.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:CV2_No_Ag\}\
+\\end\{Figure\}\
+\
+% Try with two metals - choppy energies because model relies on quite few datapoints - this is a use case that would benefit from more datapoints\
+% Most data points in the training set consist of probably all the metals most of the time. This probably makes it hard to extrapolate for the model, when only 2 metals are present, since this would be unlikely to find in the training data.\
+\
+\\begin\{Figure\}\
+ \\centering\
+ \\includegraphics[width=\\linewidth]\{CV2/CV2_Bimetal_Ag_Pd.png\}\
+ \\captionof\{figure\}\{my caption of the figure\}\
+ \\label\{fig:Bimetal\}\
+\\end\{Figure\}\
+text text text text text text text text text\
+\
+%\\subsection\{Comparison to experimental cyclic voltammograms\}\
+% Tjek m\'e5ske skal det bare diskuteres i en discussion\
+\
+\
+\\section\{Conclusion\}\
+\
+text text texttext text texttext text text\
+% Til sidst diskuter hvad der kan forbedres.\
+% - Forbedr modellen for steric hindrance. M\'e5ske kan DFT eksperimenter bruges til at m\'e5le den mere pr\'e6cist s\'e5 den kan baseres p\'e5 empiri\
+% - Fiks den underlige bug ved p\'e5s\'e6tning af adsorbater, n\'e5r der er sterisk hindring\
+\\section\{Acknowledgements\}\
+I would like to thank my supervisor Jan Rossmeisl. I would like to thank PostDoc Jack Kirk Pedersen for thorough and thoughtful daily guidance. I would like to thank Mar\'eda Paula Salinas Quezada for providing an experimental cyclic voltammogram for comparison.\
+\
+\\section\{Code\}\
+All code for this project is public at the GitHub repository:  \\url\{https://github.com/MarcusNoergaardWeng/Git_PUK.git\}\
+\
+\
+\
+\\end\{multicols\}\
+\\end\{document\}\
+\
+\
+% Skriv det med det hvorn\'e5r adsorbater s\'e6tter sit p\'e5. Negativ bindingsenergi. Det er m\'e5ske en assumption, at det er s\'e5 simpelt\
+\
+% M\'e5ske skriv det med hvorn man kommer fra phase diagram til CV}
